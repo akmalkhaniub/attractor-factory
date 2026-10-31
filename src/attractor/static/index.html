@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Attractor • Autonomous Software Factory Console</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    :root {
+      --bg-page: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-elevated: #f1f5f9;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --border-subtle: #e2e8f0;
+      --accent: #4f46e5;
+    }
+    html.dark {
+      --bg-page: #0b0f19;
+      --bg-surface: #111827;
+      --bg-elevated: #1e293b;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --border-subtle: #334155;
+      --accent: #6366f1;
+    }
+    body {
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+    }
+    .surface-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+    }
+    .diff-add {
+      background-color: rgba(16, 185, 129, 0.14);
+      color: #10b981;
+      display: block;
+      padding: 1px 8px;
+      border-left: 3px solid #10b981;
+    }
+    .diff-del {
+      background-color: rgba(239, 68, 68, 0.14);
+      color: #ef4444;
+      display: block;
+      padding: 1px 8px;
+      border-left: 3px solid #ef4444;
+    }
+    @keyframes pulseRing {
+      0%, 100% { filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.75)); }
+      50% { filter: drop-shadow(0 0 14px rgba(99, 102, 241, 1)); }
+    }
+    .node-running {
+      animation: pulseRing 1.4s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-indigo-500 selection:text-white">
+  <!-- Top Navigation Header -->
+  <header class="sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold shadow-sm">
+          A
+        </div>
+        <div>
+          <div class="flex items-center gap-2.5">
+            <h1 class="text-base font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+              Attractor Software Factory
+            </h1>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              DOT Orchestration Engine
+            </span>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Declarative Directed-Graph SDLC Runner • Spec-Driven Verification &amp; Human Gate Control
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <!-- Theme Toggle Button -->
+        <button
+          id="themeToggleBtn"
+          type="button"
+          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:border-indigo-500 transition-all"
+          title="Switch Light / Dark Theme"
+        >
+          <span id="themeIcon">☀️</span>
+          <span id="themeLabel">Light Mode</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <!-- Hero Control Bar: Preset Selection + Primary Action -->
+    <section class="surface-card rounded-xl p-5 shadow-sm">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div class="space-y-1 flex-1">
+          <label for="presetSelect" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Select Factory Workflow Blueprint
+          </label>
+          <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+            <select
+              id="presetSelect"
+              class="w-full sm:w-96 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-sm font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            ></select>
+            <span id="presetSummary" class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed"></span>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer select-none px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60">
+            <input id="autoApproveToggle" type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+            <span>Lights-Out Mode (Auto-Approve Human Gates)</span>
+          </label>
+
+          <button
+            id="validateBtn"
+            type="button"
+            class="px-3.5 py-2 rounded-lg text-xs font-semibold border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+          >
+            Validate Graph
+          </button>
+
+          <button
+            id="runPipelineBtn"
+            type="button"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm active:scale-[0.99] transition-all"
+          >
+            <span>▶ Execute Factory Pipeline</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Goal Banner -->
+      <div class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="font-semibold text-slate-500 dark:text-slate-400">PIPELINE GOAL:</span>
+          <span id="activeGoalText" class="font-medium text-slate-900 dark:text-slate-100"></span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="runStatusBadge" class="px-2.5 py-0.5 rounded-full font-medium bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+            Ready
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Human-in-the-Loop Approval Gate Banner (Hidden unless waiting for human) -->
+    <section
+      id="humanGateBanner"
+      class="hidden rounded-xl border-2 border-amber-500/80 bg-amber-500/10 p-5 shadow-md transition-all"
+    >
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="space-y-1">
+          <div class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+            <span>⬢ Human-in-the-Loop Gate Paused</span>
+            <span id="humanGateStageBadge" class="px-2 py-0.5 rounded bg-amber-500/20 font-mono"></span>
+          </div>
+          <h2 id="humanGateQuestionText" class="text-base font-semibold text-slate-900 dark:text-slate-100">
+            Review Staged Changes Before Proceeding
+          </h2>
+          <p class="text-xs text-slate-600 dark:text-slate-300">
+            The pipeline is paused at a <code class="font-mono">wait.human</code> hexagon gate. Inspect the stage outputs below and choose a routing transition:
+          </p>
+        </div>
+        <div id="humanGateOptions" class="flex flex-wrap items-center gap-2.5"></div>
+      </div>
+    </section>
+
+    <!-- Interactive Directed-Graph Pipeline Visualizer -->
+    <section class="surface-card rounded-xl p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            Directed-Graph Pipeline Topology
+          </h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Click any stage node to inspect its synthesized artifacts, prompt, and verification status.
+          </p>
+        </div>
+        <!-- Shape Legend -->
+        <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 inline-block rotate-45 bg-sky-500"></span> Start / Gate</span>
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 inline-block rounded-sm bg-indigo-500"></span> Codergen Task</span>
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 inline-block bg-teal-500"></span> Tool Runner</span>
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 inline-block rounded-full bg-amber-500"></span> Human Gate</span>
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 inline-block border-2 border-emerald-500"></span> Goal Gate</span>
+        </div>
+      </div>
+
+      <div id="dagCanvasContainer" class="w-full overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 p-4 min-h-[210px] flex items-center justify-center">
+        <svg id="dagSvg" class="w-full h-[210px]" viewBox="0 0 1050 210" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+    </section>
+
+    <!-- Primary Output Workspace: Synthesized Stage Deliverables & Live Stream -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Left 2 Columns: Actionable Stage Deliverables -->
+      <section class="lg:col-span-2 space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            Stage Deliverables &amp; Verification Artifacts
+          </h2>
+          <span id="completedCountLabel" class="text-xs text-slate-500 dark:text-slate-400">
+            No stages executed yet
+          </span>
+        </div>
+
+        <div id="stageOutputsContainer" class="space-y-4">
+          <div class="surface-card rounded-xl p-8 text-center space-y-2">
+            <p class="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Ready to run your Software Factory pipeline
+            </p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+              Click <strong>Execute Factory Pipeline</strong> above to traverse the DOT graph, execute coding and verification stages, and inspect generated diffs and test results.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Live Execution Timeline & Progressive Disclosure Accordions -->
+      <aside class="space-y-4">
+        <div class="surface-card rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Execution Event Stream
+            </h3>
+            <span id="eventCountBadge" class="text-xs font-mono text-slate-400">0 events</span>
+          </div>
+          <div id="eventLogList" class="space-y-2 max-h-80 overflow-y-auto pr-1 text-xs font-mono">
+            <div class="text-slate-400 dark:text-slate-500 py-4 text-center font-sans">
+              Waiting for pipeline execution...
+            </div>
+          </div>
+        </div>
+
+        <!-- Progressive Disclosure: Lint Diagnostics -->
+        <details id="lintAccordion" class="group surface-card rounded-xl overflow-hidden">
+          <summary class="px-4 py-3 cursor-pointer select-none flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60">
+            <span>▶ Spec Linter &amp; Validation Rules (13 Rules)</span>
+            <span id="lintSummaryBadge" class="px-2 py-0.5 rounded text-[11px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              Valid
+            </span>
+          </summary>
+          <div id="lintResultsBody" class="px-4 pb-4 pt-2 border-t border-slate-200 dark:border-slate-800 text-xs space-y-2"></div>
+        </details>
+
+        <!-- Progressive Disclosure: Checkpoint & Context Store -->
+        <details class="group surface-card rounded-xl overflow-hidden">
+          <summary class="px-4 py-3 cursor-pointer select-none flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60">
+            <span>▶ Serializable Checkpoint &amp; Run Context</span>
+            <span class="text-[11px] font-mono text-slate-400">checkpoint.json</span>
+          </summary>
+          <div class="px-4 pb-4 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <pre id="checkpointJsonView" class="text-[11px] font-mono overflow-x-auto p-3 rounded-lg bg-slate-900 text-slate-200 max-h-60">No checkpoint saved yet.</pre>
+          </div>
+        </details>
+      </aside>
+    </div>
+
+    <!-- Progressive Disclosure: DOT Pipeline Source Manifest Editor -->
+    <details class="group surface-card rounded-xl overflow-hidden shadow-sm">
+      <summary class="px-5 py-3.5 cursor-pointer select-none flex items-center justify-between text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60">
+        <span>▶ Inspect or Edit Pipeline Source Manifest (.dot Graphviz DSL)</span>
+        <span class="text-xs font-normal text-slate-500 dark:text-slate-400">Supports custom nodes, edge conditions, &amp; model stylesheets</span>
+      </summary>
+      <div class="p-5 border-t border-slate-200 dark:border-slate-800 space-y-3">
+        <textarea
+          id="dotEditor"
+          rows="14"
+          spellcheck="false"
+          class="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-950 text-slate-100 font-mono text-xs p-4 leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        ></textarea>
+        <div class="flex justify-end">
+          <button
+            id="applyDotBtn"
+            type="button"
+            class="px-4 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-all"
+          >
+            Parse &amp; Render Updated DOT Graph
+          </button>
+        </div>
+      </div>
+    </details>
+  </main>
+
+  <script>
+    // --- Theme Management (Light / Dark persisted in localStorage) ---
+    const htmlEl = document.documentElement;
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeLabel = document.getElementById('themeLabel');
+
+    function applyTheme(theme) {
+      if (theme === 'light') {
+        htmlEl.classList.remove('dark');
+        themeIcon.textContent = '🌙';
+        themeLabel.textContent = 'Dark Mode';
+      } else {
+        htmlEl.classList.add('dark');
+        themeIcon.textContent = '☀️';
+        themeLabel.textContent = 'Light Mode';
+      }
+      localStorage.setItem('theme', theme);
+    }
+
+    const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    applyTheme(savedTheme);
+
+    themeToggleBtn.addEventListener('click', () => {
+      const next = htmlEl.classList.contains('dark') ? 'light' : 'dark';
+      applyTheme(next);
+      if (currentGraph) renderDagSvg(currentGraph, currentNodeStatuses, activeNodeId);
+    });
+
+    // --- Application State ---
+    let presets = [];
+    let currentGraph = null;
+    let currentPipelineId = null;
+    let currentNodeStatuses = {};
+    let activeNodeId = null;
+    let pollTimer = null;
+
+    const presetSelect = document.getElementById('presetSelect');
+    const presetSummary = document.getElementById('presetSummary');
+    const dotEditor = document.getElementById('dotEditor');
+    const activeGoalText = document.getElementById('activeGoalText');
+    const runStatusBadge = document.getElementById('runStatusBadge');
+    const dagSvg = document.getElementById('dagSvg');
+    const stageOutputsContainer = document.getElementById('stageOutputsContainer');
+    const eventLogList = document.getElementById('eventLogList');
+    const eventCountBadge = document.getElementById('eventCountBadge');
+    const lintResultsBody = document.getElementById('lintResultsBody');
+    const lintSummaryBadge = document.getElementById('lintSummaryBadge');
+    const humanGateBanner = document.getElementById('humanGateBanner');
+    const humanGateQuestionText = document.getElementById('humanGateQuestionText');
+    const humanGateStageBadge = document.getElementById('humanGateStageBadge');
+    const humanGateOptions = document.getElementById('humanGateOptions');
+    const checkpointJsonView = document.getElementById('checkpointJsonView');
+    const completedCountLabel = document.getElementById('completedCountLabel');
+
+    // --- Format Markdown & Syntax-Highlighted Diffs ---
+    function formatDeliverableHtml(markdownText) {
+      if (!markdownText) return '';
+      const rawHtml = marked.parse(markdownText);
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = rawHtml;
+      wrapper.querySelectorAll('pre code').forEach((block) => {
+        const text = block.textContent || '';
+        if (block.className.includes('language-diff') || text.includes('--- a/') || text.includes('@@')) {
+          const lines = text.split('\n').map((line) => {
+            const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            if (line.startsWith('+') && !line.startsWith('+++')) {
+              return `<span class="diff-add">${escaped}</span>`;
+            }
+            if (line.startsWith('-') && !line.startsWith('---')) {
+              return `<span class="diff-del">${escaped}</span>`;
+            }
+            return `<span class="block px-2 text-slate-300">${escaped}</span>`;
+          });
+          block.innerHTML = lines.join('');
+        }
+      });
+      return wrapper.innerHTML;
+    }
+
+    // --- Render Interactive SVG DAG ---
+    function renderDagSvg(graph, nodeStatuses = {}, currentActive = null) {
+      if (!graph || !graph.nodes || graph.nodes.length === 0) {
+        dagSvg.innerHTML = '';
+        return;
+      }
+      const isDark = htmlEl.classList.contains('dark');
+      const nodes = graph.nodes;
+      const edges = graph.edges || [];
+
+      // Assign topological levels via BFS from start node
+      const adj = {};
+      nodes.forEach((n) => { adj[n.id] = []; });
+      edges.forEach((e) => {
+        if (adj[e.from]) adj[e.from].push(e.to);
+      });
+
+      const levels = {};
+      const startNode = nodes.find((n) => n.shape === 'Mdiamond' || n.id === 'start') || nodes[0];
+      levels[startNode.id] = 0;
+      const queue = [startNode.id];
+      while (queue.length > 0) {
+        const curr = queue.shift();
+        const currLvl = levels[curr] || 0;
+        (adj[curr] || []).forEach((nxt) => {
+          if (levels[nxt] === undefined) {
+            levels[nxt] = currLvl + 1;
+            queue.push(nxt);
+          }
+        });
+      }
+      nodes.forEach((n, i) => {
+        if (levels[n.id] === undefined) levels[n.id] = i;
+      });
+
+      const byLevel = {};
+      let maxLevel = 0;
+      nodes.forEach((n) => {
+        const lvl = levels[n.id];
+        if (lvl > maxLevel) maxLevel = lvl;
+        if (!byLevel[lvl]) byLevel[lvl] = [];
+        byLevel[lvl].push(n);
+      });
+
+      const colSpacing = Math.max(155, Math.min(200, Math.floor(960 / Math.max(1, maxLevel + 1))));
+      const svgWidth = Math.max(920, (maxLevel + 1) * colSpacing + 100);
+      const svgHeight = 220;
+      dagSvg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+
+      const positions = {};
+      Object.keys(byLevel).forEach((lvlStr) => {
+        const lvl = parseInt(lvlStr, 10);
+        const group = byLevel[lvl];
+        const x = 75 + lvl * colSpacing;
+        group.forEach((n, idx) => {
+          const y = (svgHeight / (group.length + 1)) * (idx + 1);
+          positions[n.id] = { x, y, node: n };
+        });
+      });
+
+      const edgeStroke = isDark ? '#475569' : '#94a3b8';
+      let svgParts = [
+        `<defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="${edgeStroke}" />
+          </marker>
+        </defs>`
+      ];
+
+      // Render Edges
+      edges.forEach((e) => {
+        const p1 = positions[e.from];
+        const p2 = positions[e.to];
+        if (!p1 || !p2) return;
+        const isBackEdge = p2.x <= p1.x;
+        let pathD = '';
+        let labelX = (p1.x + p2.x) / 2;
+        let labelY = (p1.y + p2.y) / 2 - 8;
+
+        if (isBackEdge) {
+          const arcY = Math.min(p1.y, p2.y) - 58;
+          pathD = `M ${p1.x} ${p1.y - 22} C ${p1.x} ${arcY}, ${p2.x} ${arcY}, ${p2.x} ${p2.y - 22}`;
+          labelY = arcY + 12;
+        } else {
+          const x1 = p1.x + 54;
+          const x2 = p2.x - 58;
+          const midX = (x1 + x2) / 2;
+          pathD = `M ${x1} ${p1.y} C ${midX} ${p1.y}, ${midX} ${p2.y}, ${x2} ${p2.y}`;
+        }
+
+        svgParts.push(
+          `<path d="${pathD}" fill="none" stroke="${edgeStroke}" stroke-width="1.75" stroke-dasharray="${isBackEdge ? '4 3' : 'none'}" marker-end="url(#arrow)" />`
+        );
+        if (e.label) {
+          const lblColor = isDark ? '#cbd5e1' : '#334155';
+          svgParts.push(
+            `<text x="${labelX}" y="${labelY}" text-anchor="middle" fill="${lblColor}" font-size="10" font-family="Inter, sans-serif">${e.label}</text>`
+          );
+        }
+      });
+
+      // Render Nodes
+      Object.values(positions).forEach(({ x, y, node }) => {
+        const st = nodeStatuses[node.id] || 'pending';
+        const isRunning = currentActive === node.id || st === 'running';
+        let fill = isDark ? '#1e293b' : '#ffffff';
+        let stroke = isDark ? '#475569' : '#cbd5e1';
+        let textColor = isDark ? '#f8fafc' : '#0f172a';
+
+        if (st === 'success' || st === 'partial_success') {
+          fill = isDark ? '#064e3b' : '#ecfdf5';
+          stroke = '#10b981';
+        } else if (st === 'fail') {
+          fill = isDark ? '#7f1d1d' : '#fef2f2';
+          stroke = '#ef4444';
+        } else if (isRunning) {
+          fill = isDark ? '#312e81' : '#eef2ff';
+          stroke = '#6366f1';
+        } else if (node.shape === 'hexagon') {
+          stroke = '#f59e0b';
+        }
+
+        const sw = node.goal_gate ? '2.8' : '1.8';
+        const runClass = isRunning ? 'node-running' : '';
+        let shapeSvg = '';
+
+        if (node.shape === 'Mdiamond' || node.shape === 'diamond') {
+          shapeSvg = `<polygon points="${x},${y - 26} ${x + 52},${y} ${x},${y + 26} ${x - 52},${y}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" />`;
+        } else if (node.shape === 'hexagon') {
+          shapeSvg = `<polygon points="${x - 54},${y} ${x - 36},${y - 24} ${x + 36},${y - 24} ${x + 54},${y} ${x + 36},${y + 24} ${x - 36},${y + 24}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" />`;
+        } else if (node.shape === 'parallelogram') {
+          shapeSvg = `<polygon points="${x - 46},${y - 22} ${x + 56},${y - 22} ${x + 46},${y + 22} ${x - 56},${y + 22}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" />`;
+        } else if (node.shape === 'Msquare') {
+          shapeSvg = `<rect x="${x - 44}" y="${y - 22}" width="88" height="44" rx="4" fill="${fill}" stroke="${stroke}" stroke-width="2.5" />`;
+        } else {
+          shapeSvg = `<rect x="${x - 54}" y="${y - 22}" width="108" height="44" rx="8" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" />`;
+        }
+
+        const shortLabel = node.label.length > 16 ? node.label.slice(0, 15) + '…' : node.label;
+        const badgeText = st === 'success' ? '✓' : (st === 'fail' ? '✕' : (isRunning ? '●' : ''));
+
+        svgParts.push(
+          `<g class="cursor-pointer ${runClass}" onclick="scrollToStageCard('${node.id}')">
+            ${shapeSvg}
+            <text x="${x}" y="${y + 4}" text-anchor="middle" fill="${textColor}" font-size="11" font-weight="600" font-family="Inter, sans-serif">${shortLabel}</text>
+            ${badgeText ? `<text x="${x + 42}" y="${y - 10}" text-anchor="middle" fill="${stroke}" font-size="11" font-weight="bold">${badgeText}</text>` : ''}
+          </g>`
+        );
+      });
+
+      dagSvg.innerHTML = svgParts.join('\n');
+    }
+
+    window.scrollToStageCard = function(nodeId) {
+      const el = document.getElementById(`stage-card-${nodeId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    // --- Validate & Render Current DOT ---
+    async function validateCurrentDot() {
+      const dot_source = dotEditor.value;
+      const resp = await fetch('/api/pipelines/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dot_source }),
+      });
+      const data = await resp.json();
+      if (data.graph) {
+        currentGraph = data.graph;
+        activeGoalText.textContent = data.graph.goal || 'Unspecified Goal';
+        renderDagSvg(currentGraph, currentNodeStatuses, activeNodeId);
+      }
+
+      const diags = data.diagnostics || [];
+      if (diags.length === 0) {
+        lintSummaryBadge.textContent = '0 Issues • Ready';
+        lintSummaryBadge.className = 'px-2 py-0.5 rounded text-[11px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
+        lintResultsBody.innerHTML = `<p class="text-emerald-600 dark:text-emerald-400 font-medium">All 13 Attractor specification lint rules passed.</p>`;
+      } else {
+        const errCount = diags.filter((d) => d.severity === 'error').length;
+        lintSummaryBadge.textContent = `${errCount} Errors, ${diags.length - errCount} Warnings`;
+        lintSummaryBadge.className = `px-2 py-0.5 rounded text-[11px] ${errCount > 0 ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'}`;
+        lintResultsBody.innerHTML = diags.map((d) => `
+          <div class="p-2 rounded border ${d.severity === 'error' ? 'border-red-500/30 bg-red-500/5 text-red-400' : 'border-amber-500/30 bg-amber-500/5 text-amber-400'}">
+            <span class="font-mono font-bold">[${d.rule}]</span> ${d.message}
+          </div>
+        `).join('');
+      }
+      return data;
+    }
+
+    // --- Render Stage Cards & Progressive Disclosure Accordions ---
+    function renderStageOutputs(pipelineData) {
+      const artifacts = pipelineData.stage_artifacts || {};
+      const completed = pipelineData.completed_nodes || [];
+      const nodesById = {};
+      (pipelineData.graph?.nodes || []).forEach((n) => { nodesById[n.id] = n; });
+
+      const keys = Object.keys(artifacts);
+      completedCountLabel.textContent = `${completed.length} of ${(pipelineData.graph?.nodes || []).length} stages completed`;
+
+      if (keys.length === 0) return;
+
+      stageOutputsContainer.innerHTML = keys.map((nodeId) => {
+        const art = artifacts[nodeId];
+        const nodeMeta = nodesById[nodeId] || { label: nodeId, shape: 'box' };
+        const st = art.status?.outcome || 'success';
+        const badgeCls = st === 'success'
+          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+          : 'bg-red-500/10 text-red-500 border-red-500/20';
+
+        const responseHtml = formatDeliverableHtml(art.response || art.status?.notes || 'Stage completed.');
+        const promptEscaped = (art.prompt || '').replace(/</g, '&lt;');
+        const statusJsonStr = JSON.stringify(art.status || {}, null, 2);
+
+        return `
+          <article id="stage-card-${nodeId}" class="surface-card rounded-xl p-5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div class="flex items-center gap-2.5">
+                <span class="px-2 py-0.5 rounded text-xs font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${nodeId}</span>
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">${nodeMeta.label}</h3>
+                ${nodeMeta.goal_gate ? '<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">Goal Gate</span>' : ''}
+              </div>
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-medium border ${badgeCls}">
+                ${st.toUpperCase()}
+              </span>
+            </div>
+
+            <div class="prose prose-sm dark:prose-invert max-w-none text-xs leading-relaxed space-y-2">
+              ${responseHtml}
+            </div>
+
+            <details class="group rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 overflow-hidden">
+              <summary class="px-3 py-2 cursor-pointer text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
+                ▶ Inspect Stage Prompt &amp; Status Receipt (status.json)
+              </summary>
+              <div class="p-3 border-t border-slate-200 dark:border-slate-800 space-y-2 text-[11px] font-mono">
+                ${promptEscaped ? `<div><div class="text-slate-400 mb-1">prompt.md:</div><pre class="p-2 rounded bg-slate-950 text-slate-200 overflow-x-auto whitespace-pre-wrap">${promptEscaped}</pre></div>` : ''}
+                <div><div class="text-slate-400 mb-1">status.json:</div><pre class="p-2 rounded bg-slate-950 text-emerald-400 overflow-x-auto">${statusJsonStr}</pre></div>
+              </div>
+            </details>
+          </article>
+        `;
+      }).join('');
+    }
+
+    // --- Render Human-in-the-Loop Gate Prompt ---
+    function renderHumanGate(pipelineData) {
+      const pending = pipelineData.pending_questions || [];
+      if (pending.length === 0) {
+        humanGateBanner.classList.add('hidden');
+        return;
+      }
+      const q = pending[0];
+      humanGateBanner.classList.remove('hidden');
+      humanGateStageBadge.textContent = `node: ${q.stage}`;
+      humanGateQuestionText.textContent = q.text;
+      humanGateOptions.innerHTML = (q.options || []).map((opt, idx) => {
+        const isPrimary = idx === 0;
+        const btnStyle = isPrimary
+          ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+          : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-600';
+        return `
+          <button
+            type="button"
+            onclick="submitHumanAnswer('${q.id}', '${opt.key}')"
+            class="px-4 py-2 rounded-lg text-xs font-semibold shadow-sm transition-all ${btnStyle}"
+          >
+            ${opt.label}
+          </button>
+        `;
+      }).join('');
+    }
+
+    window.submitHumanAnswer = async function(questionId, value) {
+      if (!currentPipelineId) return;
+      await fetch(`/api/pipelines/${currentPipelineId}/questions/${questionId}/answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value }),
+      });
+      humanGateBanner.classList.add('hidden');
+      pollPipelineState();
+    };
+
+    // --- Poll Pipeline Progress ---
+    async function pollPipelineState() {
+      if (!currentPipelineId) return;
+      const resp = await fetch(`/api/pipelines/${currentPipelineId}`);
+      if (!resp.ok) return;
+      const data = await resp.json();
+
+      currentNodeStatuses = data.node_statuses || {};
+      activeNodeId = data.current_node;
+      renderDagSvg(data.graph, currentNodeStatuses, activeNodeId);
+      renderStageOutputs(data);
+      renderHumanGate(data);
+
+      // Update status badge
+      if (data.status === 'completed') {
+        runStatusBadge.textContent = '✓ Completed (Goal Gates Satisfied)';
+        runStatusBadge.className = 'px-2.5 py-0.5 rounded-full font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400';
+      } else if (data.status === 'awaiting_human_approval') {
+        runStatusBadge.textContent = '⬢ Paused at Human Gate';
+        runStatusBadge.className = 'px-2.5 py-0.5 rounded-full font-semibold bg-amber-500/20 text-amber-500';
+      } else if (data.status === 'failed') {
+        runStatusBadge.textContent = '✕ Pipeline Failed';
+        runStatusBadge.className = 'px-2.5 py-0.5 rounded-full font-semibold bg-red-500/15 text-red-500';
+      } else {
+        runStatusBadge.textContent = `● Executing (${data.current_node || 'initializing'})`;
+        runStatusBadge.className = 'px-2.5 py-0.5 rounded-full font-semibold bg-indigo-500/15 text-indigo-500';
+      }
+
+      // Render events
+      const evts = data.events || [];
+      eventCountBadge.textContent = `${evts.length} events`;
+      eventLogList.innerHTML = evts.slice().reverse().map((e) => `
+        <div class="p-2 rounded bg-slate-100 dark:bg-slate-800/70 flex items-center justify-between gap-2">
+          <span class="font-semibold text-indigo-600 dark:text-indigo-400">${e.type}</span>
+          <span class="text-slate-500 dark:text-slate-400">${e.node_id || ''}</span>
+        </div>
+      `).join('');
+
+      // Fetch latest checkpoint
+      const cpResp = await fetch(`/api/pipelines/${currentPipelineId}/checkpoint`);
+      if (cpResp.ok) {
+        const cpData = await cpResp.json();
+        if (cpData.checkpoint) {
+          checkpointJsonView.textContent = JSON.stringify(cpData.checkpoint, null, 2);
+        }
+      }
+
+      if (data.status === 'completed' || data.status === 'failed') {
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+      }
+    }
+
+    // --- Execute Pipeline ---
+    async function startPipelineRun() {
+      if (pollTimer) clearInterval(pollTimer);
+      currentNodeStatuses = {};
+      activeNodeId = null;
+      stageOutputsContainer.innerHTML = '';
+
+      const dot_source = dotEditor.value;
+      const auto_approve = document.getElementById('autoApproveToggle').checked;
+
+      const resp = await fetch('/api/pipelines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dot_source, auto_approve, step_delay_ms: 350 }),
+      });
+
+      if (!resp.ok) {
+        alert('Pipeline validation failed. Check the Spec Linter accordion for details.');
+        await validateCurrentDot();
+        return;
+      }
+
+      const data = await resp.json();
+      currentPipelineId = data.pipeline_id;
+      await pollPipelineState();
+      pollTimer = setInterval(pollPipelineState, 350);
+    }
+
+    // --- Load Presets on Boot ---
+    async function initConsole() {
+      const resp = await fetch('/api/presets');
+      const data = await resp.json();
+      presets = data.presets || [];
+
+      presetSelect.innerHTML = presets.map((p, idx) =>
+        `<option value="${idx}">${p.title}</option>`
+      ).join('');
+
+      function selectPreset(idx) {
+        const p = presets[idx];
+        if (!p) return;
+        presetSummary.textContent = p.summary;
+        dotEditor.value = p.dot_source;
+        currentNodeStatuses = {};
+        activeNodeId = null;
+        validateCurrentDot();
+      }
+
+      presetSelect.addEventListener('change', (e) => selectPreset(parseInt(e.target.value, 10)));
+      document.getElementById('validateBtn').addEventListener('click', validateCurrentDot);
+      document.getElementById('applyDotBtn').addEventListener('click', validateCurrentDot);
+      document.getElementById('runPipelineBtn').addEventListener('click', startPipelineRun);
+
+      if (presets.length > 0) selectPreset(0);
+    }
+
+    initConsole();
+  </script>
+</body>
+</html>
