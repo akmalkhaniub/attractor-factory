@@ -6,6 +6,37 @@ from typing import Any
 
 PRESET_PIPELINES: list[dict[str, Any]] = [
     {
+        "id": "real-workspace-factory",
+        "title": "Real Workspace Factory: Webhook Verifier (Live Files & Git)",
+        "summary": "Full Layer 2 autonomous loop: targets an external repo (`g:\\ReplitProjects\\webhook-service`), writes real production code, executes pytest, and commits verified git diffs.",
+        "default_workspace": "g:\\ReplitProjects\\webhook-service",
+        "dot_source": """digraph WebhookServiceFactory {
+    graph [
+        goal="Build production-grade idempotent webhook verifier with replay protection and HMAC-SHA256 signature gating",
+        label="Webhook Service Factory",
+        default_max_retries=1
+    ]
+    rankdir=LR
+    node [shape=box, timeout="900s"]
+
+    start          [shape=Mdiamond, label="Task Intake"]
+    architect      [label="Architecture Blueprint", class="planning", prompt="Design an implementation blueprint for: $goal"]
+    synthesize     [label="Synthesize Code & Tests", class="code", prompt="Write production code and unit tests for: $goal", goal_gate=true, retry_target="architect"]
+    run_pytest     [shape=parallelogram, label="Run Pytest Suite", command="python -m pytest tests -q"]
+    test_decision  [shape=diamond, label="Tests Passing?"]
+    audit_gate     [label="Security & Invariant Audit", class="code", prompt="Audit the diff for replay vulnerabilities: $goal"]
+    human_approval [shape=hexagon, label="Release Gate Approval"]
+    exit           [shape=Msquare, label="Publish Verified Package"]
+
+    start -> architect -> synthesize -> run_pytest -> test_decision
+    test_decision -> audit_gate [label="Pass", condition="outcome=success"]
+    test_decision -> synthesize [label="Self-Heal", condition="outcome!=success"]
+    audit_gate -> human_approval
+    human_approval -> exit      [label="[A] Approve & Release"]
+    human_approval -> architect [label="[R] Request Revision"]
+}""",
+    },
+    {
         "id": "feature-factory-hitl",
         "title": "Autonomous Feature Factory (TDD + Human Gate)",
         "summary": "Plans architecture, synthesizes implementation code, runs automated verification, gates on a Human Approval node, and enforces a Goal Gate before exit.",

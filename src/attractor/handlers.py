@@ -344,10 +344,12 @@ class ToolHandler:
             write_status_file(stage_dir, out)
             return out
 
+        cwd = context.get("workspace")
         try:
             proc = subprocess.run(
                 command,
                 shell=True,
+                cwd=cwd,
                 capture_output=True,
                 text=True,
                 timeout=30,

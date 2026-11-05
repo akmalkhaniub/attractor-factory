@@ -182,6 +182,7 @@ class PipelineRunner:
         logs_root: str | Path | None = None,
         on_event: Callable[[PipelineEvent], None] | None = None,
         backoff: BackoffConfig | None = None,
+        workspace: str | Path | None = None,
     ) -> None:
         if callable(backend) and not hasattr(backend, "run"):
             resolved_backend: CodergenBackend | None = CallbackBackend(backend)
@@ -190,6 +191,7 @@ class PipelineRunner:
 
         self.registry = HandlerRegistry(backend=resolved_backend, interviewer=interviewer)
         self.logs_root = Path(logs_root) if logs_root else Path(tempfile.mkdtemp(prefix="attractor_run_"))
+        self.workspace = Path(workspace).resolve() if workspace else None
         self.on_event = on_event
         self.backoff = backoff or BackoffConfig()
         self.custom_transforms: list[Transform] = []
@@ -264,6 +266,8 @@ class PipelineRunner:
         for k, v in graph.attrs.items():
             ctx.set(f"graph.{k}", v)
         ctx.set("graph.goal", graph.goal)
+        if self.workspace and not ctx.get("workspace"):
+            ctx.set("workspace", str(self.workspace))
 
         manifest = {
             "pipeline_id": pipeline_id,
@@ -583,11 +587,13 @@ def run_pipeline(
     llm_callback: Callable[[Node, str, Context], str | Outcome] | None = None,
     interviewer: Interviewer | None = None,
     logs_root: str | Path | None = None,
+    workspace: str | Path | None = None,
 ) -> Outcome:
     """Convenience function to run an Attractor pipeline end-to-end."""
     runner = PipelineRunner(
         backend=llm_callback,
         interviewer=interviewer,
         logs_root=logs_root,
+        workspace=workspace,
     )
     return runner.run(dot_source_or_graph, context=context)

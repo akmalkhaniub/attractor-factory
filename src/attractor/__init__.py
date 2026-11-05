@@ -1,6 +1,20 @@
 """Attractor Software Factory Engine package."""
 
-from .backends import CallbackBackend, CodergenBackend, UnifiedLLMBackend
+from .agent import (
+    CodingAgentSession,
+    DirEntry,
+    ExecResult,
+    ExecutionEnvironment,
+    LocalExecutionEnvironment,
+    RegisteredTool,
+    ToolCall,
+    ToolDefinition,
+    ToolRegistry,
+    ToolResult,
+    Turn,
+    create_standard_tool_registry,
+)
+from .backends import CallbackBackend, CodergenBackend, UnifiedLLMBackend, WorkspaceCodingBackend
 from .conditions import ConditionSyntaxError, evaluate_condition
 from .engine import ArtifactStore, BackoffConfig, PipelineRunner, RetryPolicy, run_pipeline, select_edge
 from .handlers import (

@@ -39,6 +39,7 @@ class PipelineCreateRequest(BaseModel):
     dot_source: str = Field(..., min_length=10)
     auto_approve: bool = Field(default=False)
     step_delay_ms: int = Field(default=350, ge=0, le=5000)
+    workspace: str | None = Field(default=None)
 
 
 class ValidateRequest(BaseModel):
@@ -304,6 +305,7 @@ async def start_pipeline(payload: PipelineCreateRequest, request: Request) -> di
         backend=UnifiedLLMBackend(),
         interviewer=interviewer,
         logs_root=logs_root,
+        workspace=payload.workspace,
         on_event=record.on_event,
     )
     record.runner = runner

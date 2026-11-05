@@ -119,8 +119,17 @@
           <div class="flex flex-col sm:flex-row sm:items-center gap-3">
             <select
               id="presetSelect"
-              class="w-full sm:w-96 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-sm font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              class="w-full sm:w-80 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-sm font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             ></select>
+            <div class="flex items-center gap-1.5 w-full sm:w-80">
+              <span class="text-xs font-semibold text-slate-400">Target Workspace:</span>
+              <input
+                id="workspaceInput"
+                type="text"
+                placeholder="g:\ReplitProjects\webhook-service"
+                class="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
             <span id="presetSummary" class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed"></span>
           </div>
         </div>
@@ -731,11 +740,17 @@
 
       const dot_source = dotEditor.value;
       const auto_approve = document.getElementById('autoApproveToggle').checked;
+      const workspaceVal = (document.getElementById('workspaceInput')?.value || '').trim();
 
       const resp = await fetch('/api/pipelines', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dot_source, auto_approve, step_delay_ms: 350 }),
+        body: JSON.stringify({
+          dot_source,
+          auto_approve,
+          step_delay_ms: 350,
+          workspace: workspaceVal || null,
+        }),
       });
 
       if (!resp.ok) {
@@ -765,6 +780,10 @@
         if (!p) return;
         presetSummary.textContent = p.summary;
         dotEditor.value = p.dot_source;
+        if (p.default_workspace) {
+          const wsInput = document.getElementById('workspaceInput');
+          if (wsInput) wsInput.value = p.default_workspace;
+        }
         currentNodeStatuses = {};
         activeNodeId = null;
         validateCurrentDot();

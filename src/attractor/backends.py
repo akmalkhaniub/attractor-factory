@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Callable, Protocol
 
 import httpx
 
+from .agent.env import LocalExecutionEnvironment
+from .agent.loop import CodingAgentSession
 from .models import Context, Node, Outcome
 
 
@@ -24,6 +27,33 @@ class CallbackBackend:
         return self.fn(node, prompt, context)
 
 
+class WorkspaceCodingBackend:
+    """
+    Full Layer 2 Coding Agent Backend.
+    Executes real file inspections, edits, command runs, and Git commits
+    against an isolated target workspace directory.
+    """
+
+    def __init__(self, workspace_root: str | Path | None = None) -> None:
+        self.workspace_root = Path(workspace_root).resolve() if workspace_root else None
+
+    def run(self, node: Node, prompt: str, context: Context) -> str | Outcome:
+        ws_path = self.workspace_root
+        if not ws_path:
+            ctx_ws = context.get("workspace")
+            if ctx_ws:
+                ws_path = Path(ctx_ws).resolve()
+
+        if not ws_path:
+            # If no workspace is specified, fall back to UnifiedLLMBackend simulation
+            return UnifiedLLMBackend().run(node, prompt, context)
+
+        goal = context.get_string("graph.goal", "")
+        env = LocalExecutionEnvironment(ws_path)
+        session = CodingAgentSession(env=env)
+        return session.execute_task(prompt=prompt, goal=goal)
+
+
 class UnifiedLLMBackend:
     """
     Multi-provider LLM backend implementing the Unified LLM Client spec.
@@ -36,6 +66,11 @@ class UnifiedLLMBackend:
         self.prefer_live_api = prefer_live_api
 
     def run(self, node: Node, prompt: str, context: Context) -> str | Outcome:
+        # Check if a workspace is configured in context
+        ctx_ws = context.get("workspace")
+        if ctx_ws:
+            return WorkspaceCodingBackend(workspace_root=ctx_ws).run(node, prompt, context)
+
         provider = (node.llm_provider or "").lower()
         model = node.llm_model or ""
 
