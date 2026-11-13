@@ -65,8 +65,11 @@ from .transforms import (
     parse_stylesheet,
 )
 from .validator import ValidationError, validate, validate_or_raise
+from .visualizer import dot_to_ascii, dot_to_mermaid
 
 __all__ = [
+    "dot_to_ascii",
+    "dot_to_mermaid",
     "Answer",
     "AnswerValue",
     "ArtifactStore",

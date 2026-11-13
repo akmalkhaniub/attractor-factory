@@ -13,6 +13,7 @@ from .models import Outcome, Severity, StageStatus
 from .parser import DotParseError, parse_dot
 from .presets import PRESET_PIPELINES
 from .validator import validate
+from .visualizer import dot_to_ascii, dot_to_mermaid
 
 SERVER_NAME = "attractor-factory-mcp"
 SERVER_VERSION = "0.1.0"
@@ -73,6 +74,26 @@ TOOL_DEFINITIONS = [
                     "type": "string",
                     "description": "The Graphviz DOT source string.",
                 }
+            },
+            "required": ["dot_source"],
+        },
+    },
+    {
+        "name": "attractor_export_diagram",
+        "description": "Convert an Attractor DOT software factory pipeline into GitHub-compatible Mermaid flowchart or terminal ASCII diagram.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "dot_source": {
+                    "type": "string",
+                    "description": "The Graphviz DOT source string.",
+                },
+                "format": {
+                    "type": "string",
+                    "enum": ["mermaid", "ascii"],
+                    "description": "Output format: 'mermaid' (default) or 'ascii'.",
+                    "default": "mermaid",
+                },
             },
             "required": ["dot_source"],
         },
@@ -240,6 +261,13 @@ class AttractorMcpServer:
                 },
                 indent=2,
             )
+
+        if name == "attractor_export_diagram":
+            dot_source = str(args.get("dot_source", ""))
+            fmt = str(args.get("format", "mermaid")).lower()
+            if fmt == "ascii":
+                return dot_to_ascii(dot_source)
+            return dot_to_mermaid(dot_source)
 
         raise ValueError(f"Unknown tool name: {name}")
 

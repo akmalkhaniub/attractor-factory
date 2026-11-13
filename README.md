@@ -67,6 +67,19 @@ uv run uvicorn attractor.api:app --reload --port 8000
 ```
 Open **`http://localhost:8000`** to inspect preset software factory pipelines, validate custom DOT graphs, stream live stage transitions via SSE, and approve human-in-the-loop gates.
 
+### 3. Run the MCP Server & Pipeline Visualizer
+```bash
+# Run stdio MCP server for Claude Desktop / Gateway integration
+uv run python -m attractor.mcp_server
+
+# Available MCP tools:
+# - attractor_lint_pipeline: Validate DOT source against 13 spec rules
+# - attractor_run_pipeline: Execute factory pipeline on workspace
+# - attractor_list_presets: List factory templates
+# - attractor_parse_graph: Inspect AST representation
+# - attractor_export_diagram: Render Mermaid or terminal ASCII flowchart
+```
+
 ---
 
 ## 📚 Natural Language Specifications (NLSpecs)
