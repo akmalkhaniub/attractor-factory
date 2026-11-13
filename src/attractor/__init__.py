@@ -38,6 +38,7 @@ from .interviewer import (
     RecordingInterviewer,
     WebInteractiveInterviewer,
 )
+from .mcp_server import AttractorMcpServer, TOOL_DEFINITIONS
 from .models import (
     Answer,
     AnswerValue,
