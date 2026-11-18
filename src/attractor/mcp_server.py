@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .analyzer import analyze_pipeline, diff_pipelines
 from .engine import PipelineRunner, run_pipeline
 from .interviewer import AutoApproveInterviewer
 from .models import Outcome, Severity, StageStatus
@@ -96,6 +97,38 @@ TOOL_DEFINITIONS = [
                 },
             },
             "required": ["dot_source"],
+        },
+    },
+    {
+        "name": "attractor_analyze_pipeline",
+        "description": "Compute cyclomatic complexity, cycle/infinite-loop risk, critical path length, and estimated token budget for a DOT pipeline.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "dot_source": {
+                    "type": "string",
+                    "description": "The Graphviz DOT pipeline source text.",
+                }
+            },
+            "required": ["dot_source"],
+        },
+    },
+    {
+        "name": "attractor_diff_pipelines",
+        "description": "Compute a structured semantic AST diff (added/removed/modified nodes & edges, breaking changes) between two DOT pipelines.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "dot_before": {
+                    "type": "string",
+                    "description": "Original Graphviz DOT pipeline source text.",
+                },
+                "dot_after": {
+                    "type": "string",
+                    "description": "Updated Graphviz DOT pipeline source text.",
+                },
+            },
+            "required": ["dot_before", "dot_after"],
         },
     },
 ]
@@ -268,6 +301,17 @@ class AttractorMcpServer:
             if fmt == "ascii":
                 return dot_to_ascii(dot_source)
             return dot_to_mermaid(dot_source)
+
+        if name == "attractor_analyze_pipeline":
+            dot_source = str(args.get("dot_source", ""))
+            report = analyze_pipeline(dot_source)
+            return json.dumps(report, indent=2)
+
+        if name == "attractor_diff_pipelines":
+            dot_before = str(args.get("dot_before", ""))
+            dot_after = str(args.get("dot_after", ""))
+            diff_report = diff_pipelines(dot_before, dot_after)
+            return json.dumps(diff_report, indent=2)
 
         raise ValueError(f"Unknown tool name: {name}")
 

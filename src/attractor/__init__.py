@@ -64,10 +64,13 @@ from .transforms import (
     VariableExpansionTransform,
     parse_stylesheet,
 )
+from .analyzer import analyze_pipeline, diff_pipelines
 from .validator import ValidationError, validate, validate_or_raise
 from .visualizer import dot_to_ascii, dot_to_mermaid
 
 __all__ = [
+    "analyze_pipeline",
+    "diff_pipelines",
     "dot_to_ascii",
     "dot_to_mermaid",
     "Answer",

@@ -18,6 +18,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
+from .analyzer import analyze_pipeline, diff_pipelines
 from .backends import UnifiedLLMBackend
 from .engine import PipelineRunner
 from .interviewer import AutoApproveInterviewer, WebInteractiveInterviewer
@@ -46,6 +47,13 @@ class ValidateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     dot_source: str = Field(..., min_length=1)
+
+
+class DiffRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    dot_before: str = Field(..., min_length=1)
+    dot_after: str = Field(..., min_length=1)
 
 
 class AnswerSubmitRequest(BaseModel):
@@ -451,6 +459,24 @@ async def get_context(pipeline_id: str, request: Request) -> dict[str, Any]:
         return {"context": {"graph.goal": record.graph.goal}}
     data = json.loads(cp_path.read_text(encoding="utf-8"))
     return {"context": data.get("context", {})}
+
+
+@app.post("/pipelines/analyze")
+@app.post("/api/pipelines/analyze")
+async def analyze_pipeline_endpoint(req: ValidateRequest) -> dict[str, Any]:
+    try:
+        return analyze_pipeline(req.dot_source)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/pipelines/diff")
+@app.post("/api/pipelines/diff")
+async def diff_pipelines_endpoint(req: DiffRequest) -> dict[str, Any]:
+    try:
+        return diff_pipelines(req.dot_before, req.dot_after)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 STATIC_DIR = Path(__file__).parent / "static"

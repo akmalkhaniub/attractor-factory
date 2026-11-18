@@ -78,6 +78,8 @@ uv run python -m attractor.mcp_server
 # - attractor_list_presets: List factory templates
 # - attractor_parse_graph: Inspect AST representation
 # - attractor_export_diagram: Render Mermaid or terminal ASCII flowchart
+# - attractor_analyze_pipeline: Compute cyclomatic complexity, cycle risk & token budget
+# - attractor_diff_pipelines: Semantic AST diff between two DOT pipeline versions
 ```
 
 ---
